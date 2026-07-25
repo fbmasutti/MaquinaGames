@@ -59,3 +59,13 @@
   text-underline-offset: 2px;
 }
 .site-footer a:hover { color: var(--cream); opacity: 1; }
+
+/* Botão de voltar: o logo no cabeçalho de cada jogo linka de volta para o
+   hub (href="../"). Igual em todos os jogos da série. */
+.logo-link {
+  display: block;
+  line-height: 0;
+  transition: transform 0.15s ease;
+}
+.logo-link:hover { transform: scale(1.08); }
+.logo-link:active { transform: scale(0.94); }

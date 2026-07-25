@@ -1,0 +1,61 @@
+/*
+ * Máquina Tudo — tema visual compartilhado da série de jogos de mesa.
+ *
+ * Paleta e fontes de referência (Love Hultén: madeira escura, latão, LED/
+ * 7-segmentos) usadas no Curling de Mesa e no Escapa Buraco. Novos jogos da
+ * série devem linkar este arquivo antes do próprio style.css e podem
+ * sobrescrever qualquer variável localmente para customizar sem perder o
+ * resto da paleta.
+ *
+ * Uso: <link rel="stylesheet" href="../shared/theme.css" /> no <head>,
+ * antes do <link rel="stylesheet" href="style.css" /> do próprio jogo.
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Elms+Sans:wght@300;400;500;600;700&family=Bagel+Fat+One&family=Monoton&display=swap');
+
+:root {
+  /* Madeira e cabinet */
+  --wood-light: #c8965a;
+  --wood-mid: #a9713f;
+  --wood-dark: #6b4226;
+
+  /* Painéis claros / cartões de overlay */
+  --cream: #f0e6d2;
+  --cream-dark: #e2d3b0;
+
+  /* Acentos */
+  --navy: #2d3652;
+  --brass: #d4af37;
+  --brass-dark: #9c7a1f;
+  --yellow: #e8b923;
+  --red: #c0392b;
+
+  /* Mostrador 7-segmentos */
+  --seg-off: #3a1414;
+  --seg-on: #ff5b3d;
+
+  /* Tipografia */
+  --font-body: 'Elms Sans', 'Helvetica Neue', Arial, sans-serif;
+  --font-display: 'Bagel Fat One', cursive;
+  --font-title: 'Monoton', cursive;
+}
+
+/* Rodapé de crédito — igual em todos os jogos da série. */
+.site-footer {
+  width: 100%;
+  padding: 18px 14px 22px;
+  text-align: center;
+}
+.site-footer p {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.4px;
+  color: var(--cream-dark);
+  opacity: 0.65;
+}
+.site-footer a {
+  color: var(--cream-dark);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.site-footer a:hover { color: var(--cream); opacity: 1; }

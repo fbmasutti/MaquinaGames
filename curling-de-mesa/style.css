@@ -1,17 +1,4 @@
-:root {
-  --wood-light: #c8965a;
-  --wood-mid: #a9713f;
-  --wood-dark: #6b4226;
-  --cream: #f0e6d2;
-  --cream-dark: #e2d3b0;
-  --navy: #2d3652;
-  --brass: #d4af37;
-  --brass-dark: #9c7a1f;
-  --yellow: #e8b923;
-  --red: #c0392b;
-  --seg-off: #3a1414;
-  --seg-on: #ff5b3d;
-}
+/* Paleta e fontes vêm de ../shared/theme.css */
 
 * { box-sizing: border-box; }
 
@@ -26,7 +13,7 @@ html, body {
     radial-gradient(rgba(0,0,0,0.5) 1px, transparent 1.4px);
   background-size: auto, auto, 4px 4px;
   color: var(--cream);
-  font-family: 'Elms Sans', 'Helvetica Neue', Arial, sans-serif;
+  font-family: var(--font-body);
   overflow-x: hidden;
 }
 
@@ -57,12 +44,12 @@ html, body {
 }
 
 .title {
-  font-family: 'Elms Sans', 'Helvetica Neue', Arial, sans-serif;
-  font-weight: 300;
+  font-family: var(--font-title);
+  font-weight: 400;
   font-size: clamp(20px, 5vw, 32px);
   color: var(--cream);
   text-shadow: 0 2px 0 var(--navy), 0 0 18px rgba(0,0,0,0.5);
-  letter-spacing: 3px;
+  letter-spacing: 1px;
   margin: 0;
   text-align: center;
 }
@@ -262,7 +249,7 @@ html, body {
   box-shadow: 0 20px 50px rgba(0,0,0,0.6);
 }
 .overlay-card h2 {
-  font-family: 'Elms Sans', 'Helvetica Neue', Arial, sans-serif;
+  font-family: var(--font-body);
   font-weight: 700;
   letter-spacing: 1px;
   margin: 0 0 12px;

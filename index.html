@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Curling de Mesa — Máquina Tudo</title>
+  <link rel="icon" href="assets/logo-maquina-tudo.svg?v=3" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Elms+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="cabinet">
+    <header class="header">
+      <img class="logo" src="assets/logo-maquina-tudo.svg?v=3" alt="Máquina Tudo" />
+      <h1 class="title">CURLING&nbsp;DE&nbsp;MESA</h1>
+      <button id="btn-restart" class="knob-button" title="Reiniciar partida" aria-label="Reiniciar partida">
+        <svg class="knob-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <radialGradient id="knobSkirt" cx="35%" cy="30%" r="80%">
+              <stop offset="0%" stop-color="#f5f7f8" />
+              <stop offset="40%" stop-color="#c7ccd0" />
+              <stop offset="75%" stop-color="#8b9196" />
+              <stop offset="100%" stop-color="#4d5256" />
+            </radialGradient>
+            <radialGradient id="knobBlack" cx="35%" cy="25%" r="80%">
+              <stop offset="0%" stop-color="#565656" />
+              <stop offset="45%" stop-color="#232323" />
+              <stop offset="100%" stop-color="#040404" />
+            </radialGradient>
+          </defs>
+          <!-- base/skirt cromado com marcas de escala, estilo knob de amplificador vintage -->
+          <circle cx="50" cy="54" r="43" fill="url(#knobSkirt)" stroke="#3d4145" stroke-width="1.5" />
+          <g stroke="#2b2e30" stroke-width="2.4" stroke-linecap="round">
+            <line x1="29" y1="90.4" x2="32.5" y2="84.3" />
+            <line x1="13.6" y1="75" x2="19.7" y2="71.5" />
+            <line x1="8" y1="54" x2="15" y2="54" />
+            <line x1="13.6" y1="33" x2="19.7" y2="36.5" />
+            <line x1="29" y1="17.6" x2="32.5" y2="23.7" />
+            <line x1="50" y1="12" x2="50" y2="19" />
+            <line x1="71" y1="17.6" x2="67.5" y2="23.7" />
+            <line x1="86.4" y1="33" x2="80.3" y2="36.5" />
+            <line x1="92" y1="54" x2="85" y2="54" />
+            <line x1="86.4" y1="75" x2="80.3" y2="71.5" />
+            <line x1="71" y1="90.4" x2="67.5" y2="84.3" />
+          </g>
+          <!-- corpo do knob em "chicken head" preto: círculo verdadeiro (r=27) com um
+               pequeno bico apontador — não um "flame" grande, que achatava o círculo -->
+          <path d="M 40.8 28.6 L 50 14 L 59.2 28.6 A 27 27 0 1 1 40.8 28.6 Z"
+            fill="url(#knobBlack)" stroke="#000000" stroke-width="1" />
+          <line x1="50" y1="54" x2="50" y2="20" stroke="#e8e2d2" stroke-width="3.2" stroke-linecap="round" />
+          <ellipse cx="41" cy="44" rx="8" ry="6" fill="rgba(255,255,255,0.12)" />
+        </svg>
+      </button>
+    </header>
+
+    <div class="hud">
+      <div class="hud-panel yellow-panel">
+        <span class="hud-label">AMARELO</span>
+        <div id="score-yellow" class="seg-display"></div>
+        <span class="hud-sub">peças: <b id="remaining-yellow">5</b></span>
+      </div>
+
+      <div class="hud-center">
+        <div class="lamp-row">
+          <span id="lamp-yellow" class="lamp lamp-yellow"></span>
+          <span class="lamp-label">TURNO</span>
+          <span id="lamp-red" class="lamp lamp-red"></span>
+        </div>
+      </div>
+
+      <div class="hud-panel red-panel">
+        <span class="hud-label">VERMELHO</span>
+        <div id="score-red" class="seg-display"></div>
+        <span class="hud-sub">peças: <b id="remaining-red">5</b></span>
+      </div>
+    </div>
+
+    <div class="board-wrap">
+      <canvas id="board"></canvas>
+    </div>
+
+    <p class="hint">Arraste a peça para trás e solte para lançar</p>
+  </div>
+
+  <div id="overlay" class="overlay">
+    <div class="overlay-card">
+      <h2 id="overlay-title">Fim de rodada</h2>
+      <p id="overlay-body"></p>
+      <button id="btn-play-again" class="retro-badge" type="button">
+        <span class="badge-inner">
+          <span class="badge-star">★</span>
+          <span>Jogar novamente</span>
+          <span class="badge-star">★</span>
+        </span>
+      </button>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/matter-js@0.19.0/build/matter.min.js"></script>
+  <script src="js/constants.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/physics.js"></script>
+  <script src="js/render.js"></script>
+  <script src="js/input.js"></script>
+  <script src="js/sevenseg.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>

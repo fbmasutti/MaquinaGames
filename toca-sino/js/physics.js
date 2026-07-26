@@ -27,19 +27,24 @@ const GamePhysics = (function () {
     }, extraOpts || {}));
   }
 
-  function buildDome() {
+  // Aproxima um arco de círculo por N segmentos retos. Convenção: ângulo 0 =
+  // direita, π/2 = cima (y cresce pra baixo no canvas, por isso o -sin).
+  function buildArc(cx, cy, r, fromAngle, toAngle, N, extraOpts) {
     const segs = [];
-    const N = 14;
     for (let i = 0; i < N; i++) {
-      const a1 = Math.PI - (Math.PI * i) / N;
-      const a2 = Math.PI - (Math.PI * (i + 1)) / N;
-      const x1 = BOARD.fieldCenterX + Math.cos(a1) * BOARD.domeRadius;
-      const y1 = BOARD.domeBaseY - Math.sin(a1) * BOARD.domeRadius;
-      const x2 = BOARD.fieldCenterX + Math.cos(a2) * BOARD.domeRadius;
-      const y2 = BOARD.domeBaseY - Math.sin(a2) * BOARD.domeRadius;
-      segs.push(wallSegment(x1, y1, x2, y2));
+      const a1 = fromAngle + ((toAngle - fromAngle) * i) / N;
+      const a2 = fromAngle + ((toAngle - fromAngle) * (i + 1)) / N;
+      const x1 = cx + Math.cos(a1) * r;
+      const y1 = cy - Math.sin(a1) * r;
+      const x2 = cx + Math.cos(a2) * r;
+      const y2 = cy - Math.sin(a2) * r;
+      segs.push(wallSegment(x1, y1, x2, y2, extraOpts));
     }
     return segs;
+  }
+
+  function buildDome() {
+    return buildArc(BOARD.fieldCenterX, BOARD.domeBaseY, BOARD.domeRadius, Math.PI, 0, 14);
   }
 
   // O flipper é totalmente cinemático: nós mesmos calculamos a posição do
@@ -65,9 +70,18 @@ const GamePhysics = (function () {
         angle: restAngle,
         friction: 0.02,
         restitution: 0.15,
-        density: 0.004,
         label: 'flipper',
-        inertia: Infinity, // não deixa colisão com a bola girar o flipper sozinho
+        // isStatic: o corpo é movido por teleporte (setPosition/setAngle) a
+        // cada passo em stepFlippers, nunca pela integração normal do motor.
+        // Um corpo dinâmico reintegra posição/ângulo a partir de velocity
+        // logo em seguida ao nosso teleporte (Engine.update chama Body.update
+        // pra todo corpo não-estático), o que soma o movimento uma segunda
+        // vez e faz o flipper girar bem além do alvo antes de "estalar" de
+        // volta — isso que parecia um batedor batendo invertido. Corpos
+        // estáticos não passam por essa integração, então o teleporte vale
+        // como está, e a velocity que setamos ainda é usada pelo resolver de
+        // colisão pra jogar a bola com o impulso certo.
+        isStatic: true,
       }
     );
 
@@ -93,12 +107,24 @@ const GamePhysics = (function () {
 
     statics.push(...buildDome());
 
+    // Rampa que liga o topo do canal do lançador à cúpula (ver constants.js).
+    // Restitution mais alta que uma parede comum pra bola nunca perder
+    // energia suficiente pra ficar presa nesse canto em tiros fortes.
+    const lc = BOARD.laneCap;
+    statics.push(wallSegment(lc.x1, lc.y1, lc.x2, lc.y2, { restitution: PHYSICS.slingshotRestitution }));
+
     // Parede esquerda do campo
     statics.push(wallSegment(BOARD.fieldLeft, BOARD.domeBaseY, BOARD.fieldLeft, BOARD.height + 40));
     // Divisória campo/canal (com vão logo abaixo da cúpula pra bola entrar)
     statics.push(wallSegment(BOARD.fieldRight, BOARD.domeBaseY + 24, BOARD.fieldRight, BOARD.height + 40));
     // Parede externa do canal do lançador
     statics.push(wallSegment(BOARD.fieldRightOuter, BOARD.wall, BOARD.fieldRightOuter, BOARD.height + 40));
+
+    // Slingshots — guiam a bola da parede externa até o pivô do flipper,
+    // acompanhando a borda em vez de deixá-la cair no vão entre eles.
+    for (const s of BOARD.slingshots) {
+      statics.push(wallSegment(s.x1, s.y1, s.x2, s.y2, { restitution: PHYSICS.slingshotRestitution }));
+    }
 
     // Rampa em forquilha abaixo do sino — recebe a bola, guia até o sino, e
     // depois devolve ao campo por um dos lados.
@@ -192,13 +218,11 @@ const GamePhysics = (function () {
     if (f) f.active = active;
   }
 
-  // O flipper tem massa (pra transferir impulso de verdade pra bola na
-  // colisão), mas isso significa que a gravidade cria um torque de pêndulo
-  // nele — sem correção, essa gravidade briga com o ângulo alvo e o flipper
-  // nunca se estabiliza. Em vez de só setar angularVelocity e deixar o motor
-  // de física integrar (onde a gravidade entra na disputa), a cada passo
-  // calculamos o próximo ângulo diretamente e setamos ângulo + velocidade
-  // condizente — cinemático de verdade, a gravidade não tem chance de atuar.
+  // A cada passo calculamos o próximo ângulo diretamente (função do alvo,
+  // ângulo atual e velocidade angular) e setamos posição + ângulo do corpo
+  // pra esse valor — cinemático de verdade, sem deixar a gravidade ou a
+  // integração do motor interferir (o corpo é isStatic, então o Matter
+  // nunca reintegra a posição sozinho entre um passo e outro).
   function stepFlippers(dtSeconds) {
     for (const side of ['left', 'right']) {
       const f = flippers[side];
@@ -216,10 +240,11 @@ const GamePhysics = (function () {
         y: f.pivot.y + Math.sin(next) * half,
       };
       const oldCenter = f.body.position;
-      const vel = dtSeconds > 0
-        ? { x: (newCenter.x - oldCenter.x) / dtSeconds, y: (newCenter.y - oldCenter.y) / dtSeconds }
-        : { x: 0, y: 0 };
-      const angVel = dtSeconds > 0 ? (next - current) / dtSeconds : 0;
+      // Velocity do Matter é "distância por passo de física", não por
+      // segundo — Body.update soma velocity direto na posição a cada tick
+      // (sem multiplicar por delta), então o passo em si já é a velocity.
+      const vel = { x: newCenter.x - oldCenter.x, y: newCenter.y - oldCenter.y };
+      const angVel = next - current;
 
       Body.setVelocity(f.body, vel);
       Body.setAngularVelocity(f.body, angVel);

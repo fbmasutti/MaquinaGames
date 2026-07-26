@@ -45,6 +45,13 @@ const GameRender = (function () {
     drawWallLine(ctx, BOARD.fieldRight, BOARD.domeBaseY + 24, BOARD.fieldRight, BOARD.height + 40);
     drawWallLine(ctx, BOARD.fieldRightOuter, BOARD.wall, BOARD.fieldRightOuter, BOARD.height + 40);
 
+    const lc = BOARD.laneCap;
+    drawWallLine(ctx, lc.x1, lc.y1, lc.x2, lc.y2);
+
+    for (const s of BOARD.slingshots) {
+      drawWallLine(ctx, s.x1, s.y1, s.x2, s.y2);
+    }
+
     // canal do lançador — leve sombreado pra diferenciar do campo principal
     ctx.save();
     ctx.fillStyle = 'rgba(0,0,0,0.05)';

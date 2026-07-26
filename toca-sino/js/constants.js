@@ -13,6 +13,13 @@ const FIELD_CENTER_X = FIELD_LEFT + FIELD_WIDTH / 2;
 const DOME_RADIUS = FIELD_WIDTH / 2;
 const DOME_BASE_Y = WALL + DOME_RADIUS; // onde a cúpula termina e as paredes retas começam
 
+// Geometria dos flippers, calculada antes pra poder derivar as guias/slings.
+const FLIPPER_PIVOT_Y = 720 - 96;
+const FLIPPER_LENGTH = 78;
+const FLIPPER_GAP = 95; // meia-distância do centro do campo até cada pivô — pivôs perto das paredes, como na referência
+const FLIPPER_PIVOT_L = { x: FIELD_CENTER_X - FLIPPER_GAP, y: FLIPPER_PIVOT_Y };
+const FLIPPER_PIVOT_R = { x: FIELD_CENTER_X + FLIPPER_GAP, y: FLIPPER_PIVOT_Y };
+
 const BOARD = {
   width: 480,
   height: 720,
@@ -25,6 +32,14 @@ const BOARD = {
   domeRadius: DOME_RADIUS,
   domeBaseY: DOME_BASE_Y,
   domeTopY: WALL,
+
+  // Rampa que fecha o canto entre o canal do lançador e a cúpula. Sem ela, o
+  // canal é um tubo isolado até o topo do quadro: a bola lançada sobe reto e
+  // cai reto de volta pro canal, sem nunca entrar no campo — o vão abaixo da
+  // cúpula (nas paredes, logo abaixo) fica logo ao lado, mas nada guia a
+  // bola até ele. Essa rampa liga o topo do canal (fieldRightOuter) até onde
+  // a cúpula termina (fieldRight, domeBaseY), bem em cima desse vão.
+  laneCap: { x1: FIELD_RIGHT_OUTER, y1: DOME_BASE_Y + 24, x2: FIELD_RIGHT, y2: DOME_BASE_Y },
 
   ballRadius: 11,
 
@@ -49,25 +64,37 @@ const BOARD = {
   ],
 
   // Flippers
-  flipperPivotY: 720 - 96,
-  flipperLength: 78,
+  flipperPivotY: FLIPPER_PIVOT_Y,
+  flipperLength: FLIPPER_LENGTH,
   flipperThickness: 16,
-  flipperGap: 26, // meia-distância do centro do campo até cada pivô
+  flipperGap: FLIPPER_GAP,
   // Ângulos do flipper ESQUERDO (o direito é espelhado como π - ângulo).
   // Convenção: 0 = apontando pra direita, π/2 = apontando pra baixo,
   // aumentando no sentido horário. Em repouso a ponta aponta pra baixo e
-  // pro lado de fora (~125°); acionado, gira pra baixo e pro lado de
-  // dentro (~55°) — os dois ficam abaixo da linha horizontal do pivô,
-  // formando um "V" raso em vez de se cruzarem no meio.
+  // pro lado de fora (~152°); acionado, gira pra CIMA e pro lado de dentro
+  // (~-23°) — é isso que lança a bola pro campo. Os pivôs ficam afastados
+  // o bastante do centro (flipperGap) pra que as pontas não se cruzem
+  // quando os dois flippers estão acionados ao mesmo tempo.
   flipperRestAngle: 2.65,
-  flipperActiveAngle: 0.5,
+  flipperActiveAngle: -0.4,
   flipperAngularSpeed: 0.045, // rad por passo de física a ~60fps
+
+  // Guias/slingshots: ligam a parede externa ao pivô de cada flipper, pra
+  // bola descer acompanhando a borda em vez de cair reto pelo vão entre a
+  // parede e o flipper (que ficava fora do alcance dele).
+  slingshots: [
+    { x1: FIELD_LEFT, y1: FLIPPER_PIVOT_Y - 100, x2: FLIPPER_PIVOT_L.x - 6, y2: FLIPPER_PIVOT_Y - 4 },
+    { x1: FIELD_RIGHT, y1: FLIPPER_PIVOT_Y - 100, x2: FLIPPER_PIVOT_R.x + 6, y2: FLIPPER_PIVOT_Y - 4 },
+  ],
 
   // Canal do lançador (direita)
   launcherX: FIELD_RIGHT + LANE_WIDTH / 2,
   launcherRestY: 720 - 60,
   launcherMinLaunchSpeed: 6,
-  launcherMaxLaunchSpeed: 24,
+  // Acima de ~23 a bola pode ficar presa no canto entre a rampa do canal e a
+  // parede externa (as duas normais se equilibram exatamente contra a
+  // gravidade ali, travando a bola de vez). 22 fica com boa folga disso.
+  launcherMaxLaunchSpeed: 22,
   launcherChargeRate: 1.6, // por segundo, 0→1
 
   ballsPerGame: 3,
@@ -81,6 +108,7 @@ const PHYSICS = {
   ballDensity: 0.02,
   bumperRestitution: 0.9,
   wallRestitution: 0.35,
+  slingshotRestitution: 0.7,
   settleSpeedForFlipperHit: 0.02,
 };
 

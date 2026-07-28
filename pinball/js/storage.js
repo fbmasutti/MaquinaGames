@@ -1,8 +1,8 @@
-// Persistência local — Toca o Sino.
+// Persistência local — Pinball.
 
 const GameStorage = (function () {
-  const HS_KEY = 'toca-sino:hs';
-  const MUTE_KEY = 'toca-sino:mute';
+  const HS_KEY = 'pinball:hs';
+  const MUTE_KEY = 'pinball:mute';
 
   function loadHighScore() {
     const raw = window.localStorage.getItem(HS_KEY);

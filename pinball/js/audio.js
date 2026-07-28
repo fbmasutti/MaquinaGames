@@ -1,4 +1,4 @@
-// Motor de áudio — Toca o Sino. Sons sintetizados via Web Audio API.
+// Motor de áudio — Pinball. Sons sintetizados via Web Audio API.
 
 const GameAudio = (function () {
   let ctx = null;
@@ -79,7 +79,7 @@ const GameAudio = (function () {
     osc.stop(t + 0.08);
   }
 
-  function bumperDing() {
+  function postDing() {
     tone(880, 0.09, (ensure() || {}).currentTime ?? 0, { type: 'triangle', gain: 0.13, release: 0.06 });
   }
 
@@ -138,16 +138,38 @@ const GameAudio = (function () {
     tone(720, 0.04, (ensure() || {}).currentTime ?? 0, { type: 'square', gain: 0.05, attack: 0.001, release: 0.03 });
   }
 
+  // Baque surdo — bola batendo nas bordas/paredes do campo. `intensity`
+  // (0-1, vem da velocidade do impacto) controla volume e um leve grave a
+  // mais nas pancadas fortes, pra não soar igual em toda batida.
+  function wallThud(intensity) {
+    const c = ensure();
+    if (!c || !master || muted) return;
+    const t = c.currentTime;
+    const amt = Math.max(0, Math.min(1, intensity ?? 0.4));
+    const osc = c.createOscillator();
+    const g = c.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(150 + amt * 40, t);
+    osc.frequency.exponentialRampToValueAtTime(55, t + 0.07);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(0.05 + amt * 0.14, t + 0.006);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.09 + amt * 0.04);
+    osc.connect(g).connect(master);
+    osc.start(t);
+    osc.stop(t + 0.16);
+  }
+
   return {
     resume,
     setMuted,
     get muted() { return muted; },
     bellRing,
     flipperThwack,
-    bumperDing,
+    postDing,
     plungerRelease,
     ballDrain,
     gameOver,
     click,
+    wallThud,
   };
 })();

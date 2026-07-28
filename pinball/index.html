@@ -4,20 +4,20 @@
   <meta charset="UTF-8" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <title>Toca o Sino — Máquina Tudo</title>
-  <link rel="icon" href="../assets/logo-maquina-tudo.svg?v=3" />
+  <title>Pinball — Máquina Tudo</title>
+  <link rel="icon" href="../assets/logo-maquina-tudo.svg?v=73" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../shared/theme.css" />
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="../shared/theme.css?v=73" />
+  <link rel="stylesheet" href="style.css?v=73" />
 </head>
 <body>
   <div class="cabinet">
     <header class="header">
       <a class="logo-link" href="../" title="Voltar ao menu" aria-label="Voltar ao menu">
-        <img class="logo" src="../assets/logo-maquina-tudo.svg?v=3" alt="Máquina Tudo" />
+        <img class="logo" src="../assets/logo-maquina-tudo.svg?v=73" alt="Máquina Tudo" />
       </a>
-      <h1 class="title">TOCA&nbsp;O&nbsp;SINO</h1>
+      <h1 class="title">PINBALL</h1>
       <button id="btn-restart" class="knob-button" title="Reiniciar partida" aria-label="Reiniciar partida">
         <svg class="knob-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
           <defs>
@@ -83,7 +83,7 @@
     </div>
 
     <div class="board-wrap">
-      <canvas id="board" width="480" height="720"></canvas>
+      <canvas id="board" width="846" height="1392"></canvas>
     </div>
 
     <div class="controls">
@@ -92,7 +92,7 @@
       <button id="btn-flipper-right" class="flipper-button" type="button" aria-label="Flipper direito">DIR</button>
     </div>
 
-    <p class="hint">Teclado: <b>A/D</b> ou <b>←/→</b> flippers · <b>Espaço</b> segurar/soltar lançador</p>
+    <p class="hint">Flippers: <b>Shift</b> esquerdo e direito (ou <b>E</b>/<b>D</b>) · <b>Espaço</b> segura e solta o lançador</p>
   </div>
 
   <footer class="site-footer">
@@ -106,7 +106,7 @@
 
   <div id="overlay" class="overlay">
     <div class="overlay-card">
-      <h2 id="overlay-title">Toca o Sino</h2>
+      <h2 id="overlay-title">Pinball</h2>
       <p id="overlay-body"></p>
       <button id="btn-primary" class="retro-badge" type="button">
         <span class="badge-inner">
@@ -120,13 +120,14 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/matter-js@0.19.0/build/matter.min.js"></script>
-  <script src="js/constants.js"></script>
-  <script src="js/storage.js"></script>
-  <script src="js/audio.js"></script>
-  <script src="js/physics.js"></script>
-  <script src="js/render.js"></script>
-  <script src="js/input.js"></script>
+  <script src="js/playfield-path.js?v=73"></script>
+  <script src="js/constants.js?v=73"></script>
+  <script src="js/storage.js?v=73"></script>
+  <script src="js/audio.js?v=73"></script>
+  <script src="js/physics.js?v=73"></script>
+  <script src="js/render.js?v=73"></script>
+  <script src="js/input.js?v=73"></script>
   <script src="../shared/sevenseg.js"></script>
-  <script src="js/game.js"></script>
+  <script src="js/game.js?v=73"></script>
 </body>
 </html>

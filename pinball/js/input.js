@@ -1,4 +1,8 @@
-// Teclado + botões de toque: flippers e lançador — Toca o Sino.
+// Teclado + botões de toque: flippers e lançador — Pinball.
+//
+// Flippers no padrão de fliperama: Shift esquerdo e Shift direito. As letras
+// E e D funcionam como alternativa (teclados/notebooks onde segurar os dois
+// Shifts é desconfortável).
 
 const GameInput = (function () {
   let hooks = {
@@ -9,10 +13,16 @@ const GameInput = (function () {
   };
   let charging = false;
 
-  const KEY_FLIPPER = {
-    ArrowLeft: 'left', a: 'left', A: 'left',
-    ArrowRight: 'right', d: 'right', D: 'right',
-  };
+  // e.code distingue os dois Shifts; e.key não (ambos são 'Shift').
+  function flipperSideFor(e) {
+    switch (e.code) {
+      case 'ShiftLeft': return 'left';
+      case 'ShiftRight': return 'right';
+      case 'KeyE': return 'left';
+      case 'KeyD': return 'right';
+      default: return null;
+    }
+  }
 
   function setFlipperVisual(side, active) {
     const el = document.getElementById(`btn-flipper-${side}`);
@@ -36,29 +46,40 @@ const GameInput = (function () {
   }
 
   function onKeyDown(e) {
-    if (e.key === ' ') {
+    if (e.code === 'Space') {
       e.preventDefault();
       hooks.onInteract();
       startCharge();
       return;
     }
-    const side = KEY_FLIPPER[e.key];
+    const side = flipperSideFor(e);
     if (!side) return;
     e.preventDefault();
+    if (e.repeat) return;
     hooks.onInteract();
     hooks.onFlipper(side, true);
     setFlipperVisual(side, true);
   }
 
   function onKeyUp(e) {
-    if (e.key === ' ') {
+    if (e.code === 'Space') {
       releaseCharge();
       return;
     }
-    const side = KEY_FLIPPER[e.key];
+    const side = flipperSideFor(e);
     if (!side) return;
     hooks.onFlipper(side, false);
     setFlipperVisual(side, false);
+  }
+
+  // Se a janela perde o foco com uma tecla presa, o keyup nunca chega —
+  // solta tudo para o flipper não ficar travado em cima.
+  function releaseAll() {
+    ['left', 'right'].forEach((side) => {
+      hooks.onFlipper(side, false);
+      setFlipperVisual(side, false);
+    });
+    releaseCharge();
   }
 
   function bindFlipperButton(el, side) {
@@ -97,6 +118,7 @@ const GameInput = (function () {
     hooks = { ...hooks, ...options };
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
+    window.addEventListener('blur', releaseAll);
 
     const left = document.getElementById('btn-flipper-left');
     const right = document.getElementById('btn-flipper-right');
@@ -108,12 +130,7 @@ const GameInput = (function () {
 
   function reset() {
     charging = false;
-    hooks.onFlipper('left', false);
-    hooks.onFlipper('right', false);
-    setFlipperVisual('left', false);
-    setFlipperVisual('right', false);
-    const el = document.getElementById('btn-launch');
-    if (el) el.classList.remove('active');
+    releaseAll();
   }
 
   return { attach, reset, isCharging: () => charging };

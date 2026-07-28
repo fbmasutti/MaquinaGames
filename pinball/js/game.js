@@ -1,8 +1,11 @@
-// Máquina de estado do jogo: bolas, pontuação e loop principal — Toca o Sino.
+// Máquina de estado do jogo: bolas, pontuação e loop principal — Pinball.
 
 const Game = (function () {
   const BELL_POINTS = 100;
-  const BUMPER_POINTS = 10;
+  const POST_POINTS = 10;
+  const SLING_POINTS = 5;
+  const ELASTIC_POINTS = 5;
+  const RAMP_POINTS = 20;
 
   const MUTE_ICON_ON =
     '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 5V4L8 9H4z" fill="currentColor" stroke="none"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/><path d="M19.5 5.5a9 9 0 0 1 0 13"/></svg>';
@@ -21,6 +24,10 @@ const Game = (function () {
   let flash = 0;
   let charge = 0;
   let charging = false;
+  let slingFlash = 0;
+  let elasticFlash = 0;
+  let elasticFlashPos = null;
+  let lastWallThudAt = 0;
 
   // ---------------- HUD ----------------
   function updateHud() {
@@ -52,7 +59,7 @@ const Game = (function () {
     title.classList.toggle('title-font', true);
 
     if (phase === 'start') {
-      title.textContent = 'TOCA O SINO';
+      title.textContent = 'PINBALL';
       body.textContent = 'Segure para carregar o lançador e acerte o sino';
       ctaLabel.textContent = 'Iniciar';
       hi.style.display = highScore > 0 ? '' : 'none';
@@ -73,6 +80,8 @@ const Game = (function () {
     flash = 0;
     charge = 0;
     charging = false;
+    slingFlash = 0;
+    elasticFlash = 0;
     phase = 'playing';
     GamePhysics.spawnBall();
     GameInput.reset();
@@ -120,10 +129,44 @@ const Game = (function () {
     updateHud();
   }
 
-  function handleBumperHit() {
-    score += BUMPER_POINTS;
-    GameAudio.bumperDing();
+  function handleSlingHit() {
+    score += SLING_POINTS;
+    slingFlash = 1;
+    GameAudio.postDing();
     updateHud();
+  }
+
+  function handlePostHit() {
+    score += POST_POINTS;
+    GameAudio.postDing();
+    updateHud();
+  }
+
+  function handleElasticHit(pos) {
+    score += ELASTIC_POINTS;
+    elasticFlash = 1;
+    elasticFlashPos = pos;
+    GameAudio.postDing();
+    updateHud();
+  }
+
+  // Tiro certeiro na forquilha — a bola foi guiada reto até o sino.
+  function handleRampHit() {
+    score += RAMP_POINTS;
+    elasticFlash = 1;
+    elasticFlashPos = { x: 424, y: 530 };
+    GameAudio.flipperThwack();
+    updateHud();
+  }
+
+  // Baque nas paredes/bordas do campo — sem pontuação, só o som. Um
+  // cooldown curto evita metralhar o som quando a bola raspa numa parede
+  // por vários quadros seguidos.
+  function handleWallHit(intensity) {
+    const now = performance.now();
+    if (now - lastWallThudAt < 55) return;
+    lastWallThudAt = now;
+    GameAudio.wallThud(intensity);
   }
 
   // ---------------- Loop ----------------
@@ -134,6 +177,8 @@ const Game = (function () {
       GamePhysics.update(1000 / 60);
     }
     if (flash > 0) flash = Math.max(0, flash - dt * 1.6);
+    if (slingFlash > 0) slingFlash = Math.max(0, slingFlash - dt * 4);
+    if (elasticFlash > 0) elasticFlash = Math.max(0, elasticFlash - dt * 5);
     draw();
   }
 
@@ -145,42 +190,32 @@ const Game = (function () {
   }
 
   function draw() {
-    GameRender.drawField(ctx);
-    GameRender.drawWalls(ctx);
-    GameRender.drawRamp(ctx);
-    for (const b of BOARD.bumpers) GameRender.drawBumper(ctx, b);
-    GameRender.drawBell(ctx, flash);
-
-    for (const side of ['left', 'right']) {
-      const f = PhysicsFlipperInfo(side);
-      GameRender.drawFlipper(ctx, f.pivot, f.angle, BOARD.flipperLength, BOARD.flipperThickness);
-    }
-
     const ball = GamePhysics.getBall();
-    if (ball) GameRender.drawBall(ctx, ball.position.x, ball.position.y);
-
-    GameRender.drawLauncherMeter(ctx, charge);
-
-    if (flash > 0) {
-      ctx.save();
-      ctx.fillStyle = `rgba(255, 236, 160, ${flash * 0.28})`;
-      ctx.fillRect(0, 0, BOARD.width, BOARD.height);
-      ctx.restore();
-    }
-  }
-
-  // Pequeno acesso somente-leitura ao ângulo/pivô do flipper pro desenho
-  // (evita expor os bodies inteiros do Matter pro módulo de render).
-  function PhysicsFlipperInfo(side) {
-    return GamePhysics.getFlipperInfo(side);
+    GameRender.draw(ctx, {
+      flippers: {
+        left: GamePhysics.getFlipperInfo('left'),
+        right: GamePhysics.getFlipperInfo('right'),
+      },
+      ball: ball ? { x: ball.position.x, y: ball.position.y } : null,
+      charge,
+      bellFlash: flash,
+      bell: GamePhysics.getBellInfo(),
+      slingFlash,
+      elasticFlash,
+      elasticFlashPos,
+      elasticBumpers: GamePhysics.getElasticBumpers(),
+      doorOpenness: GamePhysics.getDoorOpenness(),
+    });
   }
 
   // ---------------- Setup ----------------
   function resizeCanvas() {
-    dpr = window.devicePixelRatio || 1;
-    canvas.width = BOARD.width * dpr;
-    canvas.height = BOARD.height * dpr;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // O espaço interno já é 1024x1536 — bem acima do tamanho de exibição
+    // (~450px de largura), então não multiplicamos por devicePixelRatio:
+    // seria um backing store enorme sem ganho visual.
+    canvas.width = BOARD.width;
+    canvas.height = BOARD.height;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
 
     const ratio = BOARD.width / BOARD.height;
     const wrap = canvas.parentElement;
@@ -198,7 +233,11 @@ const Game = (function () {
     ctx = canvas.getContext('2d');
     GamePhysics.init();
     GamePhysics.setOnBellHit(handleBellHit);
-    GamePhysics.setOnBumperHit(handleBumperHit);
+    GamePhysics.setOnPostHit(handlePostHit);
+    GamePhysics.setOnSlingHit(handleSlingHit);
+    GamePhysics.setOnElasticHit(handleElasticHit);
+    GamePhysics.setOnRampHit(handleRampHit);
+    GamePhysics.setOnWallHit(handleWallHit);
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
 

@@ -10,6 +10,9 @@ const Game = (function () {
   let ctx, canvas;
   let dpr = 1;
   let state;
+  // Duração do anel de confirmação quando um disco pontua (ver
+  // e.scoredAt/drawScorePulse) — puramente visual, não afeta o jogo.
+  const SCORE_PULSE_MS = 650;
 
   function freshState() {
     return {
@@ -140,14 +143,32 @@ const Game = (function () {
 
     if (state.currentPlayerIndex === 0) {
       GameAudio.playTurnEnd();
-      for (const e of state.onBoard) GamePhysics.removePiece(e.body);
-      state.onBoard = [];
-      state.currentPlayerIndex = 1;
-      startTurn();
+      showTurnEndOverlay();
     } else {
       state.phase = 'gameEnd';
       showGameEnd();
     }
+  }
+
+  // Pausa entre os dois turnos: mostra quem acabou de jogar, a pontuação e
+  // quem é o próximo, e só limpa o tabuleiro/começa o turno seguinte quando
+  // o jogador confirma — dá tempo de ver o resultado final antes dos discos
+  // sumirem. Enquanto essa tela está visível não há activeEntry nenhum, então
+  // o gesto de arremesso já fica desabilitado sozinho (ver canDrag em init()).
+  function showTurnEndOverlay() {
+    const finished = currentPlayer();
+    const next = state.players[1];
+    document.getElementById('turn-overlay-title').textContent = `${finished.label}: ${finished.score} pontos`;
+    document.getElementById('turn-overlay-body').textContent = `Próximo: ${next.label}`;
+    document.getElementById('turn-overlay').classList.add('visible');
+  }
+
+  function proceedToNextTurn() {
+    document.getElementById('turn-overlay').classList.remove('visible');
+    for (const e of state.onBoard) GamePhysics.removePiece(e.body);
+    state.onBoard = [];
+    state.currentPlayerIndex = 1;
+    startTurn();
   }
 
   function showGameEnd() {
@@ -167,6 +188,7 @@ const Game = (function () {
 
   function resetGame() {
     document.getElementById('overlay').classList.remove('visible');
+    document.getElementById('turn-overlay').classList.remove('visible');
     for (const e of state.onBoard) GamePhysics.removePiece(e.body);
     state = freshState();
     startTurn();
@@ -261,7 +283,10 @@ const Game = (function () {
           if (active.settledFrames > 12) {
             active.settled = true;
             Matter.Body.setVelocity(active.body, { x: 0, y: 0 });
-            if (slotForBody(active.body)) GameAudio.playScore();
+            if (slotForBody(active.body)) {
+              GameAudio.playScore();
+              active.scoredAt = performance.now();
+            }
             afterSettle();
           }
         } else {
@@ -299,9 +324,13 @@ const Game = (function () {
     GameRender.drawSlots(ctx);
     GameRender.drawDividers(ctx);
 
+    const now = performance.now();
     for (const e of state.onBoard) {
       const pos = e.body.position;
       GameRender.drawPiece(ctx, pos.x, pos.y);
+      if (e.scoredAt && now - e.scoredAt < SCORE_PULSE_MS) {
+        GameRender.drawScorePulse(ctx, pos.x, pos.y, (now - e.scoredAt) / SCORE_PULSE_MS);
+      }
     }
 
     // Sem estilingue: o "aro" pontilhado sinaliza o disco arrastável, e a
@@ -343,8 +372,28 @@ const Game = (function () {
 
     document.getElementById('btn-restart').addEventListener('click', resetGame);
     document.getElementById('btn-play-again').addEventListener('click', resetGame);
+    document.getElementById('btn-next-turn').addEventListener('click', proceedToNextTurn);
+    document.getElementById('btn-start-game').addEventListener('click', dismissRules);
+    maybeShowRules();
 
     requestAnimationFrame(frame);
+  }
+
+  // Regras na abertura: só na primeira visita, ou até o jogador marcar
+  // "não mostrar novamente" (persistido em localStorage, mesmo padrão de
+  // chave "jogo:campo" do storage.js do Pinball/Escapa Buraco). O jogo já
+  // está pronto por baixo (ver #rules-overlay em style.css bloqueando
+  // clique na área toda) — dispensar o modal não precisa reiniciar nada.
+  const RULES_HIDDEN_KEY = 'sjoelen:rulesHidden';
+  function maybeShowRules() {
+    if (window.localStorage.getItem(RULES_HIDDEN_KEY) === '1') return;
+    document.getElementById('rules-overlay').classList.add('visible');
+  }
+  function dismissRules() {
+    if (document.getElementById('rules-dont-show').checked) {
+      window.localStorage.setItem(RULES_HIDDEN_KEY, '1');
+    }
+    document.getElementById('rules-overlay').classList.remove('visible');
   }
 
   return { init };

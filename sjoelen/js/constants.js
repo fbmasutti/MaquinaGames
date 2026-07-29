@@ -36,6 +36,14 @@ const BOARD = {
   slotOrder: [2, 3, 4, 1]
 };
 
+// Zona de arrasto/wind-up do arremesso (ver input.js): até onde o disco
+// pode ser puxado antes da soltura. dragMinY é o limite "pra frente", mais
+// perto dos compartimentos; dragMaxY é o limite "pra trás", perto do
+// trilho de baixo. Vive em BOARD (não só dentro de input.js) porque
+// render.js também usa pra desenhar a linha que marca esse limite.
+BOARD.dragMinY = BOARD.restY - 260;
+BOARD.dragMaxY = BOARD.height - BOARD.railThickness - BOARD.pieceRadius;
+
 // Bordas x de cada compartimento, derivadas de BOARD (não hardcoded) —
 // physics.js usa pra posicionar os divisores, render.js pra desenhar/rotular,
 // game.js pra classificar onde uma peça parou.
@@ -65,18 +73,35 @@ const PHYSICS = {
   // sjoelbak físico: um lançamento forte tem energia de sobra pra atravessar
   // o compartimento inteiro, bater na parede de fundo e voltar quicando até
   // a área azul (perto do jogador), igual ao tabuleiro de madeira real.
-  // frictionAir bem baixo (era 0.05, depois 0.025) faz QUALQUER lançamento
-  // deslizar bem mais longe por unidade de força — inclusive puxões fracos,
-  // que agora fluem sem perder força rápido. maxLaunchSpeed subiu de 42 pra
-  // 46 pra compensar (menos fricção sozinha reduziria o alcance máximo já
-  // calibrado); a combinação foi validada com um loop síncrono determinístico
-  // (ver __debugStep em game.js) simulando o lançamento mais forte possível
-  // — testar via requestAnimationFrame numa aba automatizada em segundo
-  // plano não avança de forma confiável e já deu leituras falsas antes.
-  frictionAir: 0.01,
-  restitution: 0.55,
-  pieceRestitution: 0.4,
-  railRestitution: 0.35,
+  // frictionAir — reduzido pra 0.006, depois ajustado ligeiramente pra
+  // cima (0.008) a pedido: "quase bom", só um pouco mais de fricção. Menos
+  // amortecimento DESLIZANDO no tabuleiro (o disco livre, sem colidir com
+  // nada, mantém a força por mais tempo/distância) — separado de propósito
+  // da dissipação em colisões entre discos (ver pieceCollisionDamping).
+  frictionAir: 0.008,
+  // IMPORTANTE (descoberto testando): o Matter.js usa o MENOR restitution
+  // entre os dois corpos de uma colisão, não o maior — então baixar
+  // pieceRestitution abaixo de railRestitution também amortecia a batida
+  // disco-CONTRA-PAREDE (o disco vira o corpo "mole" do par), o que não
+  // era o pedido (o pedido falava só de impacto ENTRE discos, não contra
+  // parede). Por isso pieceRestitution fica >= railRestitution aqui — pra
+  // colisão com trilho/parede continuar valendo o railRestitution de
+  // sempre — e a dissipação EXTRA especificamente disco-disco é aplicada
+  // à parte, na colisão (ver pieceCollisionDamping e collisionStart em
+  // physics.js), não mexendo neste valor base.
+  pieceRestitution: 0.3,
+  railRestitution: 0.28,
+  // Amortecimento adicional aplicado só no impacto disco-disco (ver
+  // collisionStart em physics.js): multiplica a velocidade dos dois discos
+  // no instante do choque, ANTES do Matter.js resolver o próprio bounce.
+  // Descoberta testando: o PRÓPRIO resolver do Matter.js já é bem lossy
+  // nessa colisão (com pieceRestitution=0.3, uma tacada de disco-contra-
+  // disco já retém só ~24% da velocidade combinada, SEM nenhum
+  // amortecimento extra daqui) — então esse fator tem pouca margem real
+  // pra "apertar" mais (0.55 → ~13% de retenção, 0.75 → ~18%). Como ficou
+  // forte demais em 0.55/0.75, subido bem perto de 1 (praticamente
+  // desativado, só um toque leve por cima do natural do motor).
+  pieceCollisionDamping: 0.9,
   density: 0.02,
   // Disco "realmente parado" — a pedido explícito, o jogo espera cruzar
   // ESTE limiar (baixo, preciso) antes de atualizar o placar e liberar a
@@ -115,7 +140,10 @@ const COLORS = {
   laneNear: '#3a5a86',
   laneNearDark: '#2d4568',
   laneFar: '#e8b923',
-  laneFarDark: '#c79f16'
+  laneFarDark: '#c79f16',
+  // Piso de cada casinha numerada — separa visualmente as 4 casas do resto
+  // da faixa amarela da pista.
+  compartmentFloor: '#E65B1D'
 };
 
 const PLAYERS = {

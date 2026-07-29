@@ -7,11 +7,6 @@
 const GameInput = (function () {
   const restPosition = { x: BOARD.width / 2, y: BOARD.restY };
   const GRAB_RADIUS = BOARD.pieceRadius * 1.8;
-  // Janela onde o disco pode ser arrastado durante o "wind-up" do
-  // arremesso — não é elástico, só evita que o disco saia da área de
-  // lançamento enquanto o jogador prepara o gesto.
-  const DRAG_MIN_Y = BOARD.restY - 260;
-  const DRAG_MAX_Y = BOARD.height - BOARD.railThickness - BOARD.pieceRadius;
 
   let canvas;
   let dragging = false;
@@ -34,7 +29,7 @@ const GameInput = (function () {
 
   function clampPos(pos) {
     const x = Math.max(BOARD.pieceRadius, Math.min(BOARD.width - BOARD.pieceRadius, pos.x));
-    const y = Math.max(DRAG_MIN_Y, Math.min(DRAG_MAX_Y, pos.y));
+    const y = Math.max(BOARD.dragMinY, Math.min(BOARD.dragMaxY, pos.y));
     return { x, y };
   }
 

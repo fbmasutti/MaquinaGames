@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="../shared/theme.css" />
-  <link rel="stylesheet" href="style.css?v=25" />
+  <link rel="stylesheet" href="style.css?v=26" />
 </head>
 <body>
   <div class="cabinet">
@@ -95,6 +95,43 @@
     </p>
   </footer>
 
+  <div id="rules-overlay" class="overlay">
+    <div class="overlay-card rules-card">
+      <h2>Como jogar Sjoelen</h2>
+      <ul class="rules-list">
+        <li>Arraste o disco e solte com um gesto de arremesso — como um lançamento de mão de verdade.</li>
+        <li>Cada jogador lança 12 discos por turno, tentando acertar as casas 2, 3, 4 e 1.</li>
+        <li>Um disco em cada uma das 4 casas forma um <strong>conjunto completo</strong>: vale 20 pontos, em vez da soma dos números.</li>
+        <li>Depois dos 12 lançamentos, passa a vez pro outro jogador.</li>
+      </ul>
+      <label class="rules-checkbox">
+        <input type="checkbox" id="rules-dont-show" />
+        Não mostrar novamente
+      </label>
+      <button id="btn-start-game" class="retro-badge" type="button">
+        <span class="badge-inner">
+          <span class="badge-star">★</span>
+          <span>Jogar</span>
+          <span class="badge-star">★</span>
+        </span>
+      </button>
+    </div>
+  </div>
+
+  <div id="turn-overlay" class="overlay">
+    <div class="overlay-card">
+      <h2 id="turn-overlay-title">Fim do turno</h2>
+      <p id="turn-overlay-body"></p>
+      <button id="btn-next-turn" class="retro-badge" type="button">
+        <span class="badge-inner">
+          <span class="badge-star">★</span>
+          <span>Próximo jogador</span>
+          <span class="badge-star">★</span>
+        </span>
+      </button>
+    </div>
+  </div>
+
   <div id="overlay" class="overlay">
     <div class="overlay-card">
       <h2 id="overlay-title">Fim de partida</h2>
@@ -110,12 +147,12 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/matter-js@0.19.0/build/matter.min.js"></script>
-  <script src="js/constants.js?v=27"></script>
-  <script src="js/audio.js?v=27"></script>
-  <script src="js/physics.js?v=27"></script>
-  <script src="js/render.js?v=27"></script>
-  <script src="js/input.js?v=27"></script>
+  <script src="js/constants.js?v=42"></script>
+  <script src="js/audio.js?v=33"></script>
+  <script src="js/physics.js?v=38"></script>
+  <script src="js/render.js?v=34"></script>
+  <script src="js/input.js?v=33"></script>
   <script src="../shared/sevenseg.js"></script>
-  <script src="js/game.js?v=30"></script>
+  <script src="js/game.js?v=42"></script>
 </body>
 </html>

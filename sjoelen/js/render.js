@@ -96,6 +96,20 @@ const GameRender = (function () {
     ctx.lineTo(BOARD.width - 20, BOARD.shootLineY);
     ctx.stroke();
 
+    // limite de arrasto (ver BOARD.dragMinY/clampPos em input.js) — até onde
+    // dá pra puxar o disco pra trás durante o wind-up do arremesso.
+    // Tracejada de propósito (não é uma linha de regra do jogo, como o gate
+    // ou o lançamento — é só um guia de UI), mas com contraste alto o
+    // suficiente pra ser vista sem precisar procurar.
+    ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([4, 6]);
+    ctx.beginPath();
+    ctx.moveTo(20, BOARD.dragMinY);
+    ctx.lineTo(BOARD.width - 20, BOARD.dragMinY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
     ctx.restore();
   }
 
@@ -108,11 +122,13 @@ const GameRender = (function () {
     ctx.font = '700 40px "Special Elite", "Courier New", monospace';
 
     for (const slot of BOARD.slots) {
-      // piso do compartimento — leve realce pra separar visualmente do resto da faixa amarela
-      ctx.fillStyle = 'rgba(255,255,255,0.12)';
+      // piso do compartimento — cor própria (laranja), separando bem cada
+      // casa do resto da faixa amarela da pista.
+      ctx.fillStyle = COLORS.compartmentFloor;
       ctx.fillRect(slot.xMin, BOARD.compartmentBackY, slot.xMax - slot.xMin, BOARD.gateY - BOARD.compartmentBackY);
 
-      ctx.fillStyle = 'rgba(45,54,82,0.75)';
+      // número da casa no mesmo creme do logo — lê bem sobre o laranja.
+      ctx.fillStyle = COLORS.cream;
       ctx.fillText(String(slot.value), slot.centerX, (BOARD.compartmentBackY + BOARD.gateY) / 2);
     }
 
@@ -336,6 +352,22 @@ const GameRender = (function () {
     ctx.restore();
   }
 
+  // Pulso de confirmação quando um disco pontua — anel que expande e some,
+  // no mesmo creme do logo/números. progress vai de 0 (acabou de pontuar)
+  // a 1 (totalmente sumido); quem chama controla o tempo (ver
+  // e.scoredAt em game.js).
+  function drawScorePulse(ctx, x, y, progress) {
+    ctx.save();
+    const r = BOARD.pieceRadius * (1 + progress * 1.6);
+    const alpha = (1 - progress) * 0.75;
+    ctx.strokeStyle = `rgba(240,230,210,${alpha.toFixed(2)})`;
+    ctx.lineWidth = 3 * (1 - progress) + 1;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
   function drawLogo(ctx, x, y, scale, color) {
     ctx.save();
     ctx.translate(x, y);
@@ -394,6 +426,7 @@ const GameRender = (function () {
     drawRails,
     drawDividers,
     drawPiece,
+    drawScorePulse,
     drawAimHint,
     drawThrowIndicator,
     drawLogo

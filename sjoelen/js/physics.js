@@ -78,6 +78,19 @@ const GamePhysics = (function () {
         if (speed < 1.5) continue;
         if (isPieceHit) {
           GameAudio.playClack(Math.min(1, speed / 45));
+          // Amortecimento extra só neste tipo de impacto (ver
+          // PHYSICS.pieceCollisionDamping) — reduz a velocidade dos dois
+          // discos ANTES do resolver do Matter.js aplicar o próprio bounce
+          // de restitution, então os dois efeitos se somam: o choque
+          // absorve bem mais energia do que uma batida contra o trilho.
+          Body.setVelocity(bodyA, {
+            x: bodyA.velocity.x * PHYSICS.pieceCollisionDamping,
+            y: bodyA.velocity.y * PHYSICS.pieceCollisionDamping
+          });
+          Body.setVelocity(bodyB, {
+            x: bodyB.velocity.x * PHYSICS.pieceCollisionDamping,
+            y: bodyB.velocity.y * PHYSICS.pieceCollisionDamping
+          });
         } else {
           GameAudio.playKnock(Math.min(1, speed / 45));
         }

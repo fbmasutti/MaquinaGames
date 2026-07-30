@@ -1,6 +1,7 @@
 // Máquina de estado do jogo: níveis, sequências, pontuação e loop principal.
 
 const Game = (function () {
+  const RULES_HIDDEN_KEY = "escapaburaco:rulesHidden";
   let canvas, ctx, dpr = 1;
   let lastTime = 0;
 
@@ -67,6 +68,8 @@ const Game = (function () {
     const cta = document.getElementById("btn-primary");
     const ctaLabel = document.getElementById("btn-primary-label");
     const hi = document.getElementById("overlay-hi");
+    const rulesList = document.getElementById("overlay-rules");
+    const rulesCheckbox = document.getElementById("overlay-rules-checkbox");
 
     if (phase === "playing" || phase === "fetching") {
       overlay.classList.remove("visible");
@@ -83,17 +86,24 @@ const Game = (function () {
       cta.style.display = "";
       hi.style.display = highScore > 0 ? "" : "none";
       hi.textContent = `HI · ${String(highScore).padStart(4, "0")}`;
+      const showRules = localStorage.getItem(RULES_HIDDEN_KEY) !== "1";
+      rulesList.style.display = showRules ? "" : "none";
+      rulesCheckbox.style.display = showRules ? "" : "none";
     } else if (phase === "levelClear") {
       title.textContent = `NÍVEL ${levelIdx + 1} OK`;
       body.textContent = "Preparando próximo nível…";
       cta.style.display = "none";
       hi.style.display = "none";
+      rulesList.style.display = "none";
+      rulesCheckbox.style.display = "none";
     } else if (phase === "gameOver") {
       title.textContent = "FIM DE JOGO";
       body.textContent = `Pontuação: ${score}   ·   Recorde: ${Math.max(score, highScore)}`;
       ctaLabel.textContent = "Jogar de novo";
       cta.style.display = "";
       hi.style.display = "none";
+      rulesList.style.display = "none";
+      rulesCheckbox.style.display = "none";
     }
   }
 
@@ -197,6 +207,10 @@ const Game = (function () {
 
   function handlePrimaryAction() {
     EscapaAudio.resume();
+    if (phase === "start") {
+      const dontShow = document.getElementById("rules-dont-show");
+      if (dontShow && dontShow.checked) localStorage.setItem(RULES_HIDDEN_KEY, "1");
+    }
     if (phase === "start" || phase === "gameOver") startGame();
   }
 

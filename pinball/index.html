@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="../shared/theme.css?v=73" />
-  <link rel="stylesheet" href="style.css?v=73" />
+  <link rel="stylesheet" href="style.css?v=74" />
 </head>
 <body>
   <div class="cabinet">
@@ -108,6 +108,16 @@
     <div class="overlay-card">
       <h2 id="overlay-title">Pinball</h2>
       <p id="overlay-body"></p>
+      <ul id="overlay-rules" class="rules-list">
+        <li>Segure o botão <b>LANÇAR</b> (ou <b>Espaço</b>) para carregar o lançador e solte para pôr a bola em jogo.</li>
+        <li>Use os flippers (<b>ESQ</b>/<b>DIR</b>, ou <b>Shift</b> esquerdo/direito, ou <b>E</b>/<b>D</b>) para rebater a bola.</li>
+        <li>Acerte o sino, os postes, os slingshots e a rampa para somar pontos.</li>
+        <li>Você tem 3 bolas por partida — quando a última cair, a pontuação final aparece.</li>
+      </ul>
+      <label id="overlay-rules-checkbox" class="rules-checkbox">
+        <input type="checkbox" id="rules-dont-show" />
+        Não mostrar as regras novamente
+      </label>
       <button id="btn-primary" class="retro-badge" type="button">
         <span class="badge-inner">
           <span class="badge-star">★</span>
@@ -124,10 +134,10 @@
   <script src="js/constants.js?v=73"></script>
   <script src="js/storage.js?v=73"></script>
   <script src="js/audio.js?v=73"></script>
-  <script src="js/physics.js?v=73"></script>
+  <script src="js/physics.js?v=78"></script>
   <script src="js/render.js?v=73"></script>
   <script src="js/input.js?v=73"></script>
   <script src="../shared/sevenseg.js"></script>
-  <script src="js/game.js?v=73"></script>
+  <script src="js/game.js?v=74"></script>
 </body>
 </html>

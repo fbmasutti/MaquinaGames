@@ -147,45 +147,60 @@ const GamePhysics = (function () {
     // (testado: os 43 furos redondos viram 17). Ver nota em playfield-path.js.
     for (const d of PLAYFIELD_PATHS) cctx.fill(new Path2D(d));
     const data = cctx.getImageData(0, 0, w, h).data;
-    const isArt = (x, y) => data[(y * w + x) * 4 + 3] > 100;
+    const n = w * h;
 
-    const state = new Uint8Array(w * h); // 0=unvisited, 1=art, 2=outside bg, 3=hole
-    const stack = [];
-    for (let x = 0; x < w; x++) { stack.push([x, 0], [x, h - 1]); }
-    for (let y = 0; y < h; y++) { stack.push([0, y], [w - 1, y]); }
-    while (stack.length) {
-      const [x, y] = stack.pop();
-      if (x < 0 || y < 0 || x >= w || y >= h) continue;
-      const idx = y * w + x;
-      if (state[idx]) continue;
-      if (isArt(x, y)) { state[idx] = 1; continue; }
-      state[idx] = 2;
-      stack.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
+    // state: 0=unvisited, 1=art, 2=outside bg, 3=hole. Pré-marca todo pixel
+    // de arte numa passada linear só (em vez de reavaliar alpha a cada
+    // vizinho visitado nas duas inundações abaixo).
+    const state = new Uint8Array(n);
+    for (let i = 0; i < n; i++) { if (data[i * 4 + 3] > 100) state[i] = 1; }
+
+    // Pilha plana de índices (idx = y*w+x) reaproveitada pelas duas
+    // inundações — marca o pixel no MOMENTO de empilhar (não ao desempilhar,
+    // como a versão anterior baseada em array-de-arrays), então cada pixel
+    // entra na pilha no máximo uma vez e um Int32Array(n) nunca estoura.
+    // Isso troca ~1,18M alocações de array/destructuring por acesso direto
+    // a inteiros — é o que torna essa função ordens de grandeza mais rápida.
+    const stack = new Int32Array(n);
+    let sp = 0;
+    for (let x = 0; x < w; x++) {
+      const i0 = x, i1 = (h - 1) * w + x;
+      if (state[i0] === 0) { state[i0] = 2; stack[sp++] = i0; }
+      if (state[i1] === 0) { state[i1] = 2; stack[sp++] = i1; }
+    }
+    for (let y = 0; y < h; y++) {
+      const i0 = y * w, i1 = y * w + (w - 1);
+      if (state[i0] === 0) { state[i0] = 2; stack[sp++] = i0; }
+      if (state[i1] === 0) { state[i1] = 2; stack[sp++] = i1; }
+    }
+    while (sp > 0) {
+      const idx = stack[--sp];
+      const x = idx % w, y = (idx / w) | 0;
+      if (x + 1 < w && state[idx + 1] === 0) { state[idx + 1] = 2; stack[sp++] = idx + 1; }
+      if (x - 1 >= 0 && state[idx - 1] === 0) { state[idx - 1] = 2; stack[sp++] = idx - 1; }
+      if (y + 1 < h && state[idx + w] === 0) { state[idx + w] = 2; stack[sp++] = idx + w; }
+      if (y - 1 >= 0 && state[idx - w] === 0) { state[idx - w] = 2; stack[sp++] = idx - w; }
     }
 
     const holes = [];
     for (let y = 0; y < h; y++) {
       for (let x = 0; x < w; x++) {
         const idx = y * w + x;
-        if (state[idx]) continue;
-        if (isArt(x, y)) { state[idx] = 1; continue; }
+        if (state[idx] !== 0) continue;
         let minX = x, maxX = x, minY = y, maxY = y, count = 0;
-        const st = [[x, y]];
+        let sp2 = 0;
         state[idx] = 3;
-        while (st.length) {
-          const [cx, cy] = st.pop();
+        stack[sp2++] = idx;
+        while (sp2 > 0) {
+          const cidx = stack[--sp2];
           count++;
+          const cx = cidx % w, cy = (cidx / w) | 0;
           if (cx < minX) minX = cx; if (cx > maxX) maxX = cx;
           if (cy < minY) minY = cy; if (cy > maxY) maxY = cy;
-          const nb = [[cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]];
-          for (const [nx, ny] of nb) {
-            if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
-            const nidx = ny * w + nx;
-            if (state[nidx]) continue;
-            if (isArt(nx, ny)) { state[nidx] = 1; continue; }
-            state[nidx] = 3;
-            st.push([nx, ny]);
-          }
+          if (cx + 1 < w && state[cidx + 1] === 0) { state[cidx + 1] = 3; stack[sp2++] = cidx + 1; }
+          if (cx - 1 >= 0 && state[cidx - 1] === 0) { state[cidx - 1] = 3; stack[sp2++] = cidx - 1; }
+          if (cy + 1 < h && state[cidx + w] === 0) { state[cidx + w] = 3; stack[sp2++] = cidx + w; }
+          if (cy - 1 >= 0 && state[cidx - w] === 0) { state[cidx - w] = 3; stack[sp2++] = cidx - w; }
         }
         if (count > 4) {
           const cx = (minX + maxX) / 2;
@@ -289,7 +304,7 @@ const GamePhysics = (function () {
       }
     }
 
-    return bodies.filter((b) => {
+    const result = bodies.filter((b) => {
       if (b.label !== 'wall') return true;
       const p = b.position;
       const inGate = p.x > LAUNCH_GATE.x0 && p.x < LAUNCH_GATE.x1
@@ -308,6 +323,7 @@ const GamePhysics = (function () {
         && Math.hypot(p.x - bellInfo.x, p.y - bellInfo.y) < bellInfo.r + 10;
       return !inGate && !inFunnel && !inBellRing;
     });
+    return result;
   }
 
   // Calha inclinada de verdade sob o sino — a "forquilha" do vetor tem fundo

@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="../shared/theme.css" />
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css?v=1" />
 </head>
 <body>
   <div class="cabinet">
@@ -96,6 +96,29 @@
     </p>
   </footer>
 
+  <div id="rules-overlay" class="overlay">
+    <div class="overlay-card rules-card">
+      <h2>Como jogar Curling de Mesa</h2>
+      <ul class="rules-list">
+        <li>Puxe a peça para trás, como num estilingue de dois pontos, e solte para lançar em direção ao alvo.</li>
+        <li>Amarelo e vermelho se revezam, lançando uma peça por vez.</li>
+        <li>Quanto mais perto do centro do alvo a peça parar, mais pontos ela vale.</li>
+        <li>Depois de 5 peças de cada jogador, vence quem somar mais pontos.</li>
+      </ul>
+      <label class="rules-checkbox">
+        <input type="checkbox" id="rules-dont-show" />
+        Não mostrar novamente
+      </label>
+      <button id="btn-start-game" class="retro-badge" type="button">
+        <span class="badge-inner">
+          <span class="badge-star">★</span>
+          <span>Jogar</span>
+          <span class="badge-star">★</span>
+        </span>
+      </button>
+    </div>
+  </div>
+
   <div id="overlay" class="overlay">
     <div class="overlay-card">
       <h2 id="overlay-title">Fim de rodada</h2>
@@ -111,12 +134,12 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/matter-js@0.19.0/build/matter.min.js"></script>
-  <script src="js/constants.js"></script>
-  <script src="js/audio.js"></script>
-  <script src="js/physics.js"></script>
-  <script src="js/render.js"></script>
-  <script src="js/input.js"></script>
+  <script src="js/constants.js?v=1"></script>
+  <script src="js/audio.js?v=1"></script>
+  <script src="js/physics.js?v=1"></script>
+  <script src="js/render.js?v=1"></script>
+  <script src="js/input.js?v=1"></script>
   <script src="../shared/sevenseg.js"></script>
-  <script src="js/game.js"></script>
+  <script src="js/game.js?v=1"></script>
 </body>
 </html>

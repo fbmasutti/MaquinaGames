@@ -317,6 +317,28 @@ html, body {
 .overlay-card p { margin: 0 0 14px; font-size: 14px; }
 .overlay-card p:last-child { margin-bottom: 0; }
 
+/* Regras do jogo, mostradas dentro da própria tela de início (não é um
+   modal separado — a tela de início já é o "gate" antes de jogar). O card
+   é text-align:center, então a lista precisa da própria âncora à esquerda. */
+.rules-list {
+  margin: 0 0 14px;
+  padding-left: 20px;
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: left;
+}
+.rules-list li + li { margin-top: 6px; }
+.rules-checkbox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 13px;
+  margin-bottom: 16px;
+  cursor: pointer;
+}
+.rules-checkbox input { width: 16px; height: 16px; accent-color: var(--wood-dark); cursor: pointer; }
+
 .retro-badge {
   --ribbon: polygon(0% 50%, 8% 0%, 92% 0%, 100% 50%, 92% 100%, 8% 100%);
   position: relative;

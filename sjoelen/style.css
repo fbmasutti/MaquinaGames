@@ -290,6 +290,9 @@ html, body {
 #rules-overlay { pointer-events: auto; }
 .rules-card { max-width: 380px; text-align: left; }
 .rules-card h2 { text-align: center; }
+/* O botão herdava text-align:left do card (por causa da lista de regras)
+   e ficava colado na esquerda em vez de centralizado. */
+.rules-card .retro-badge { display: block; margin-left: auto; margin-right: auto; }
 .rules-list {
   margin: 0 0 16px;
   padding-left: 20px;

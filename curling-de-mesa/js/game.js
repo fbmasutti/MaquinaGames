@@ -2,6 +2,7 @@
 
 const Game = (function () {
   const RING_SCORES_ASC = [...BOARD.targetRings].sort((a, b) => a.radius - b.radius);
+  const RULES_HIDDEN_KEY = 'curling:rulesHidden';
 
   let ctx, canvas;
   let dpr = 1;
@@ -104,6 +105,18 @@ const Game = (function () {
     title.textContent = winnerText;
     body.textContent = `Amarelo: ${totals.yellow} pontos  |  Vermelho: ${totals.red} pontos`;
     overlay.classList.add('visible');
+  }
+
+  function maybeShowRules() {
+    if (localStorage.getItem(RULES_HIDDEN_KEY) === '1') return;
+    document.getElementById('rules-overlay').classList.add('visible');
+  }
+
+  function dismissRules() {
+    if (document.getElementById('rules-dont-show').checked) {
+      localStorage.setItem(RULES_HIDDEN_KEY, '1');
+    }
+    document.getElementById('rules-overlay').classList.remove('visible');
   }
 
   function resetGame() {
@@ -245,6 +258,8 @@ const Game = (function () {
 
     document.getElementById('btn-restart').addEventListener('click', resetGame);
     document.getElementById('btn-play-again').addEventListener('click', resetGame);
+    document.getElementById('btn-start-game').addEventListener('click', dismissRules);
+    maybeShowRules();
 
     requestAnimationFrame(frame);
   }

@@ -6,7 +6,6 @@
 
 const GameInput = (function () {
   const restPosition = { x: BOARD.width / 2, y: BOARD.restY };
-  const GRAB_RADIUS = BOARD.pieceRadius * 1.8;
 
   let canvas;
   let dragging = false;
@@ -55,15 +54,26 @@ const GameInput = (function () {
     return { dirX: dx / dist, dirY: dy / dist, speed };
   }
 
+  // Qualquer toque dentro da faixa de wind-up (BOARD.grabZoneYMin/YMax,
+  // largura toda em X) já pega o disco — não precisa mais acertar bem
+  // perto dele. O disco teleporta pro ponto tocado (via handleMove logo
+  // abaixo) e o arrasto continua dali, em qualquer X e bem perto do fundo
+  // do tabuleiro se o jogador quiser.
+  function withinGrabZone(pos) {
+    return pos.y >= BOARD.grabZoneYMin && pos.y <= BOARD.grabZoneYMax;
+  }
+
   function onPointerDown(e) {
     GameAudio.ensureCtx();
     if (!hooks.canDrag()) return;
     const raw = clientToBoard(e.clientX, e.clientY);
-    const piecePos = hooks.getPiecePosition();
-    if (Math.hypot(raw.x - piecePos.x, raw.y - piecePos.y) > GRAB_RADIUS) return;
+    if (!withinGrabZone(raw)) return;
     dragging = true;
     history = [{ x: raw.x, y: raw.y, t: performance.now() }];
-    canvas.setPointerCapture(e.pointerId);
+    // Só falha em cenários bem específicos (ex.: eventos sintéticos sem
+    // ponteiro ativo de verdade por trás) — não deixa isso interromper o
+    // resto do gesto (o teleporte pro ponto tocado logo abaixo).
+    try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* ignora */ }
     hooks.onDragStart && hooks.onDragStart();
     handleMove(e);
   }

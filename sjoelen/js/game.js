@@ -12,7 +12,25 @@ const Game = (function () {
   let state;
   // Duração do anel de confirmação quando um disco pontua (ver
   // e.scoredAt/drawScorePulse) — puramente visual, não afeta o jogo.
-  const SCORE_PULSE_MS = 650;
+  // Subido de 650 pra 900ms (junto com o anel maior/mais opaco em
+  // render.js) — a versão curta era fácil de perder no meio do resto.
+  const SCORE_PULSE_MS = 900;
+  // Assentamento mais rápido sem "congelar" o disco de repente: com o
+  // atrito de ar baixo, a velocidade decai tão devagar que cruzar
+  // settleVelocityThreshold sozinho podia levar 8-10s numa tacada forte.
+  // A primeira versão do freio assistido (início no quadro 90, fator 0.94)
+  // ficou forte demais — o disco desacelerava rápido demais e parecia
+  // artificial ("sobre o gelo" na parte livre, depois um freio estranho).
+  // Suavizado a pedido: começa mais tarde (deixa o disco deslizar livre
+  // por mais tempo) e freia bem mais de leve por quadro — junto com o
+  // frictionAir um pouco mais alto agora, o efeito soma sem se destacar
+  // como algo "a parte".
+  const SETTLE_ASSIST_START_FRAME = 140;
+  const SETTLE_ASSIST_FACTOR = 0.975;
+  const MAX_FLIGHT_FRAMES = 280;
+  // Duração da animação de "recolher os discos" na passagem de turno (ver
+  // startCollectAnimation) — puramente visual.
+  const COLLECT_ANIM_MS = 550;
 
   function freshState() {
     return {
@@ -26,7 +44,8 @@ const Game = (function () {
       nextRoundQueue: [], // ids que ficaram na pista, repescados pra próxima rodada
       onBoard: [], // { id, body, settledFrames } — peças atualmente no tabuleiro (podem ser de rodadas anteriores)
       activeEntry: null, // entrada de onBoard correspondente à peça em jogo agora
-      phase: 'aiming', // aiming | flight | gameEnd
+      phase: 'aiming', // aiming | flight | turnEnd | collecting | gameEnd
+      collectAnim: null,
       nextPuckId: 0
     };
   }
@@ -53,7 +72,13 @@ const Game = (function () {
     // novo a cada rodada seguinte e, se alguém o derrubasse pra pista mais
     // tarde, entraria errado na fila de repescagem (a regra real só
     // repesca quem falhou NA rodada em que foi lançado).
-    const entry = { id, body, settledFrames: 0, launched: false, settled: false, thrownRound: state.round };
+    // wasInSlot rastreia se o disco estava numa casa na última checagem de
+    // placar (ver refreshScore) — é o que permite disparar o pulso/som de
+    // pontuação pra QUALQUER disco que passe a valer pontos, não só o que
+    // acabou de ser lançado. Sem isso, um disco empurrado indiretamente
+    // pra dentro de uma casa por OUTRO lançamento nunca disparava o pulso,
+    // mesmo contando certinho no placar.
+    const entry = { id, body, settledFrames: 0, flightFrames: 0, launched: false, settled: false, thrownRound: state.round, wasInSlot: false };
     state.onBoard.push(entry);
     state.activeEntry = entry;
     state.phase = 'aiming';
@@ -143,6 +168,11 @@ const Game = (function () {
 
     if (state.currentPlayerIndex === 0) {
       GameAudio.playTurnEnd();
+      // Sem isso, o phase ficava travado em 'flight' pra sempre enquanto
+      // o overlay de fim de turno está aberto — tick() ia continuar
+      // rodando o bloco de "flight" a cada quadro (inofensivo antes, mas
+      // agora chamaria afterSettle() de novo e de novo, sem parar).
+      state.phase = 'turnEnd';
       showTurnEndOverlay();
     } else {
       state.phase = 'gameEnd';
@@ -165,10 +195,54 @@ const Game = (function () {
 
   function proceedToNextTurn() {
     document.getElementById('turn-overlay').classList.remove('visible');
-    for (const e of state.onBoard) GamePhysics.removePiece(e.body);
-    state.onBoard = [];
-    state.currentPlayerIndex = 1;
-    startTurn();
+    startCollectAnimation(() => {
+      for (const e of state.onBoard) GamePhysics.removePiece(e.body);
+      state.onBoard = [];
+      state.currentPlayerIndex = 1;
+      startTurn();
+    });
+  }
+
+  // Animação simples de "recolher os discos": em vez de sumir tudo de
+  // uma vez, cada disco desliza (com facilidade de saída/entrada — ease
+  // out cúbico) até convergir num único ponto no centro da linha de
+  // repouso, e só então o tabuleiro é limpo de verdade e o turno seguinte
+  // começa. Move os corpos do Matter.js direto via Body.setPosition — não
+  // precisa de física de verdade aqui, é só um efeito visual de transição.
+  function startCollectAnimation(onComplete) {
+    if (state.onBoard.length === 0) {
+      onComplete();
+      return;
+    }
+    const items = state.onBoard.map((e) => ({
+      entry: e,
+      x0: e.body.position.x,
+      y0: e.body.position.y
+    }));
+    state.collectAnim = {
+      items,
+      target: { x: BOARD.width / 2, y: BOARD.restY },
+      startTime: performance.now(),
+      onComplete
+    };
+    state.phase = 'collecting';
+  }
+
+  function tickCollectAnimation() {
+    const anim = state.collectAnim;
+    const t = Math.min(1, (performance.now() - anim.startTime) / COLLECT_ANIM_MS);
+    const eased = 1 - Math.pow(1 - t, 3);
+    for (const item of anim.items) {
+      Matter.Body.setPosition(item.entry.body, {
+        x: item.x0 + (anim.target.x - item.x0) * eased,
+        y: item.y0 + (anim.target.y - item.y0) * eased
+      });
+    }
+    if (t >= 1) {
+      const done = anim.onComplete;
+      state.collectAnim = null;
+      done();
+    }
   }
 
   function showGameEnd() {
@@ -253,13 +327,32 @@ const Game = (function () {
   // dar feedback imediato de cada disco que entra ou sai de um compartimento
   // (inclusive quando um disco quica pra fora depois de empurrado por outro,
   // ou termina de assentar em segundo plano — ver frame()).
+  //
+  // O som/pulso de pontuação dispara AQUI, comparando o estado "está numa
+  // casa" de cada disco contra a última checagem (e.wasInSlot) — não só
+  // pro disco que acabou de ser lançado. Isso pega tanto quem pontuou
+  // direto quanto quem foi empurrado INDIRETAMENTE pra dentro de uma casa
+  // por outro lançamento, já que os dois casos passam por aqui do mesmo
+  // jeito (afterSettle só chama isso depois que o tabuleiro inteiro para).
   function refreshScore() {
+    for (const e of state.onBoard) {
+      const inSlot = !!slotForBody(e.body);
+      if (inSlot && !e.wasInSlot) {
+        GameAudio.playScore();
+        e.scoredAt = performance.now();
+      }
+      e.wasInSlot = inSlot;
+    }
     currentPlayer().score = computeScore(state.onBoard).score;
     updateHud();
   }
 
   function frame() {
-    tick();
+    if (state.phase === 'collecting') {
+      tickCollectAnimation();
+    } else {
+      tick();
+    }
     render();
     requestAnimationFrame(frame);
   }
@@ -273,24 +366,49 @@ const Game = (function () {
       // deslizando).
       const active = state.onBoard.find((e) => e.launched && !e.settled);
       if (active) {
+        active.flightFrames++;
+        if (active.flightFrames > SETTLE_ASSIST_START_FRAME) {
+          const v = active.body.velocity;
+          Matter.Body.setVelocity(active.body, { x: v.x * SETTLE_ASSIST_FACTOR, y: v.y * SETTLE_ASSIST_FACTOR });
+        }
+        const forcedSettle = active.flightFrames > MAX_FLIGHT_FRAMES;
         if (GamePhysics.isOutOfBounds(active.body)) {
           active.settled = true;
           GamePhysics.removePiece(active.body);
           state.onBoard = state.onBoard.filter((o) => o !== active);
-          afterSettle();
-        } else if (GamePhysics.isSettled(active.body)) {
+        } else if (GamePhysics.isSettled(active.body) || forcedSettle) {
           active.settledFrames++;
-          if (active.settledFrames > 12) {
+          if (active.settledFrames > 12 || forcedSettle) {
             active.settled = true;
             Matter.Body.setVelocity(active.body, { x: 0, y: 0 });
-            if (slotForBody(active.body)) {
-              GameAudio.playScore();
-              active.scoredAt = performance.now();
-            }
-            afterSettle();
+            // O som/pulso de pontuação NÃO é decidido aqui — ver
+            // refreshScore(), chamada por afterSettle() logo que o
+            // tabuleiro inteiro parar. Checar só o disco recém-lançado
+            // deixava de fora quem pontuava DE FORMA INDIRETA (empurrado
+            // pra dentro de uma casa por este mesmo lançamento).
           }
         } else {
           active.settledFrames = 0;
+        }
+      }
+
+      // Só avança pra próxima peça/rodada quando o tabuleiro INTEIRO está
+      // parado — não só o disco recém-lançado. Antes, um disco empurrado
+      // por uma colisão (ainda deslizando de um choque) podia ficar de
+      // fora: o placar final era calculado com ele em plena posição
+      // intermediária, ainda em movimento, não na posição final de
+      // verdade. Enquanto sobrar algo se mexendo, aplica o mesmo freio
+      // assistido nele também, pra não esperar de mais.
+      const stillWaitingOnThrow = state.onBoard.some((e) => e.launched && !e.settled);
+      if (!stillWaitingOnThrow) {
+        const stillMoving = state.onBoard.filter((e) => !GamePhysics.isSettled(e.body));
+        if (stillMoving.length > 0) {
+          for (const e of stillMoving) {
+            const v = e.body.velocity;
+            Matter.Body.setVelocity(e.body, { x: v.x * SETTLE_ASSIST_FACTOR, y: v.y * SETTLE_ASSIST_FACTOR });
+          }
+        } else {
+          afterSettle();
         }
       }
     }
@@ -319,10 +437,11 @@ const Game = (function () {
     ctx.save();
     ctx.translate(BOARD.railThickness, BOARD.railThickness);
 
-    GameRender.drawRails(ctx);
-    GameRender.drawPlaySurface(ctx);
-    GameRender.drawSlots(ctx);
-    GameRender.drawDividers(ctx);
+    // Rails+pista+casas+divisores nunca mudam — desenhados uma vez só e
+    // cacheados (ver drawStaticBackground em render.js), em vez de
+    // redesenhar tudo isso (2 gradientes + texto + 3 sombras borradas)
+    // a cada quadro.
+    GameRender.drawStaticBackground(ctx);
 
     const now = performance.now();
     for (const e of state.onBoard) {
@@ -332,6 +451,12 @@ const Game = (function () {
         GameRender.drawScorePulse(ctx, pos.x, pos.y, (now - e.scoredAt) / SCORE_PULSE_MS);
       }
     }
+
+    // Desenhada DEPOIS dos discos de propósito — a ponte de madeira que
+    // separa a área amarela da azul precisa ficar por CIMA deles pra dar a
+    // impressão de que o disco passa por BAIXO dela (antes, desenhada
+    // junto com o resto do fundo, os discos apareciam passando por cima).
+    GameRender.drawLaneBridge(ctx);
 
     // Sem estilingue: o "aro" pontilhado sinaliza o disco arrastável, e a
     // seta de prévia (só durante o arrasto) mostra a direção/força que o
@@ -361,7 +486,6 @@ const Game = (function () {
 
     GameInput.attach(canvas, {
       canDrag: () => state.phase === 'aiming' && !!state.activeEntry,
-      getPiecePosition: () => state.activeEntry ? state.activeEntry.body.position : GameInput.restPosition,
       onDrag: (x, y) => onDrag(x, y),
       onRelease: (dx, dy, dist) => launch(dx, dy, dist),
       onCancel: () => cancelDrag()

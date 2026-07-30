@@ -59,14 +59,16 @@ const GameAudio = (function () {
     osc.stop(now + opts.oscDecay + 0.03);
   }
 
-  // Batida grave — peça contra o trilho/divisor
+  // Batida — peça contra o trilho/divisor. Mais aguda e seca a pedido
+  // (frequências mais altas + decaimento bem mais curto, menos "corpo"
+  // ressoando — um toque mais do que um baque).
   function playKnock(intensity) {
     const ac = ensureCtx();
     if (ac.currentTime - lastKnockAt < MIN_INTERVAL) return;
     lastKnockAt = ac.currentTime;
     playImpact(intensity, {
-      bandpassBase: 280, bandpassRange: 180, noiseDecay: 0.09,
-      oscBase: 170, oscRange: 50, oscTarget: 85, oscDecay: 0.1
+      bandpassBase: 420, bandpassRange: 180, noiseDecay: 0.045,
+      oscBase: 260, oscRange: 60, oscTarget: 140, oscDecay: 0.05
     });
   }
 

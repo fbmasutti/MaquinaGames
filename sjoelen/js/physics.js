@@ -2,10 +2,15 @@
 // mais alto que o Curling (pista comprida — calibrar força é parte do jogo).
 
 const GamePhysics = (function () {
-  const { Engine, World, Bodies, Body, Composite } = Matter;
+  const { Engine, Bodies, Body, Composite } = Matter;
 
   let engine, world;
   const pieceBodies = new Map(); // body.id -> { id }
+  // Corpos que colidiram disco-disco neste sub-passo e ainda precisam
+  // levar a dissipação extra (ver PHYSICS.pieceCollisionDamping) —
+  // aplicada em 'afterUpdate', NUNCA dentro de 'collisionStart' (ver
+  // comentário grande logo abaixo pra entender por quê).
+  let pendingCollisionDamping = [];
 
   function init() {
     engine = Engine.create();
@@ -78,23 +83,34 @@ const GamePhysics = (function () {
         if (speed < 1.5) continue;
         if (isPieceHit) {
           GameAudio.playClack(Math.min(1, speed / 45));
-          // Amortecimento extra só neste tipo de impacto (ver
-          // PHYSICS.pieceCollisionDamping) — reduz a velocidade dos dois
-          // discos ANTES do resolver do Matter.js aplicar o próprio bounce
-          // de restitution, então os dois efeitos se somam: o choque
-          // absorve bem mais energia do que uma batida contra o trilho.
-          Body.setVelocity(bodyA, {
-            x: bodyA.velocity.x * PHYSICS.pieceCollisionDamping,
-            y: bodyA.velocity.y * PHYSICS.pieceCollisionDamping
-          });
-          Body.setVelocity(bodyB, {
-            x: bodyB.velocity.x * PHYSICS.pieceCollisionDamping,
-            y: bodyB.velocity.y * PHYSICS.pieceCollisionDamping
-          });
+          // Dissipação extra sutil só no choque disco-disco (ver
+          // PHYSICS.pieceCollisionDamping) — representa o atrito estático
+          // que o disco parado precisa vencer pra sair andando, energia
+          // que não vira movimento. NÃO aplicamos Body.setVelocity aqui
+          // dentro do 'collisionStart': testando, descobri que chamar
+          // Body.setVelocity nesse evento — mesmo multiplicando por 1
+          // (matematicamente um no-op) — faz o resolver do Matter.js
+          // perder quase toda a energia da colisão de qualquer forma
+          // (a retenção despencava de ~95% pra ~24%, independente do
+          // fator usado). Por isso só marcamos os corpos aqui e aplicamos
+          // o amortecimento de verdade em 'afterUpdate', DEPOIS do
+          // resolver já ter processado o bounce de restitution normal.
+          pendingCollisionDamping.push(bodyA, bodyB);
         } else {
           GameAudio.playKnock(Math.min(1, speed / 45));
         }
       }
+    });
+
+    Matter.Events.on(engine, 'afterUpdate', () => {
+      if (pendingCollisionDamping.length === 0) return;
+      for (const body of pendingCollisionDamping) {
+        Body.setVelocity(body, {
+          x: body.velocity.x * PHYSICS.pieceCollisionDamping,
+          y: body.velocity.y * PHYSICS.pieceCollisionDamping
+        });
+      }
+      pendingCollisionDamping = [];
     });
 
     return { engine, world };

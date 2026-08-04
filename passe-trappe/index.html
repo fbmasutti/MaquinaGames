@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Passe-Trappe — Máquina Tudo</title>
+  <link rel="icon" href="../assets/logo-maquina-tudo.svg?v=3" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="../shared/theme.css" />
+  <link rel="stylesheet" href="style.css?v=2" />
+</head>
+<body>
+  <div class="cabinet">
+    <header class="header">
+      <a class="logo-link" href="../" title="Voltar ao menu" aria-label="Voltar ao menu">
+        <img class="logo" src="../assets/logo-maquina-tudo.svg?v=3" alt="Máquina Tudo" />
+      </a>
+      <h1 class="title">PASSE-TRAPPE</h1>
+      <button id="btn-restart" class="knob-button" title="Reiniciar partida" aria-label="Reiniciar partida">
+        <svg class="knob-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <radialGradient id="knobSkirt" cx="35%" cy="30%" r="80%">
+              <stop offset="0%" stop-color="#f5f7f8" />
+              <stop offset="40%" stop-color="#c7ccd0" />
+              <stop offset="75%" stop-color="#8b9196" />
+              <stop offset="100%" stop-color="#4d5256" />
+            </radialGradient>
+            <radialGradient id="knobBlack" cx="35%" cy="25%" r="80%">
+              <stop offset="0%" stop-color="#565656" />
+              <stop offset="45%" stop-color="#232323" />
+              <stop offset="100%" stop-color="#040404" />
+            </radialGradient>
+          </defs>
+          <circle cx="50" cy="54" r="43" fill="url(#knobSkirt)" stroke="#3d4145" stroke-width="1.5" />
+          <g stroke="#2b2e30" stroke-width="2.4" stroke-linecap="round">
+            <line x1="29" y1="90.4" x2="32.5" y2="84.3" />
+            <line x1="13.6" y1="75" x2="19.7" y2="71.5" />
+            <line x1="8" y1="54" x2="15" y2="54" />
+            <line x1="13.6" y1="33" x2="19.7" y2="36.5" />
+            <line x1="29" y1="17.6" x2="32.5" y2="23.7" />
+            <line x1="50" y1="12" x2="50" y2="19" />
+            <line x1="71" y1="17.6" x2="67.5" y2="23.7" />
+            <line x1="86.4" y1="33" x2="80.3" y2="36.5" />
+            <line x1="92" y1="54" x2="85" y2="54" />
+            <line x1="86.4" y1="75" x2="80.3" y2="71.5" />
+            <line x1="71" y1="90.4" x2="67.5" y2="84.3" />
+          </g>
+          <path d="M 40.8 28.6 L 50 14 L 59.2 28.6 A 27 27 0 1 1 40.8 28.6 Z"
+            fill="url(#knobBlack)" stroke="#000000" stroke-width="1" />
+          <line x1="50" y1="54" x2="50" y2="20" stroke="#e8e2d2" stroke-width="3.2" stroke-linecap="round" />
+          <ellipse cx="41" cy="44" rx="8" ry="6" fill="rgba(255,255,255,0.12)" />
+        </svg>
+      </button>
+    </header>
+
+    <div class="hud">
+      <div class="hud-panel">
+        <span class="hud-label">VOCÊ</span>
+        <div id="hud-player" class="seg-display"></div>
+      </div>
+      <div class="hud-panel">
+        <span class="hud-label">NÍVEL</span>
+        <div id="hud-level" class="seg-display"></div>
+      </div>
+      <div class="hud-panel">
+        <span class="hud-label">MÁQUINA</span>
+        <div id="hud-ai" class="seg-display"></div>
+      </div>
+    </div>
+
+    <div class="board-wrap">
+      <canvas id="board"></canvas>
+    </div>
+
+    <p class="hint">Puxe o disco contra o elástico e solte — não espere o anterior parar, é um jogo de velocidade</p>
+  </div>
+
+  <footer class="site-footer">
+    <p>
+      Desenvolvido pelo
+      <a href="https://www.maquinatudo.com.br" target="_blank" rel="noopener noreferrer">Coletivo Máquina Tudo</a>
+      · Licença
+      <a href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noopener noreferrer">CC BY-NC 4.0</a>
+    </p>
+  </footer>
+
+  <div id="overlay" class="overlay">
+    <div class="overlay-card">
+      <h2 id="overlay-title" class="title-font">Passe-Trappe</h2>
+      <p id="overlay-body"></p>
+      <ul id="overlay-rules" class="rules-list">
+        <li>Puxe um disco contra o elástico do seu lado (embaixo) e solte pra arremessá-lo em direção ao vão central.</li>
+        <li>O objetivo é passar todos os seus discos pro lado da máquina antes que ela passe os dela pro seu lado.</li>
+        <li>Não espere um disco parar pra lançar o próximo — é um jogo de velocidade, pegue e arremesse assim que possível.</li>
+        <li>A cada nível a máquina fica mais rápida e precisa, e os vãos da divisória ficam mais estreitos.</li>
+      </ul>
+      <label id="overlay-rules-checkbox" class="rules-checkbox">
+        <input type="checkbox" id="rules-dont-show" />
+        Não mostrar as regras novamente
+      </label>
+      <button id="btn-primary" class="retro-badge" type="button">
+        <span class="badge-inner">
+          <span class="badge-star">★</span>
+          <span id="btn-primary-label">Iniciar</span>
+          <span class="badge-star">★</span>
+        </span>
+      </button>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/matter-js@0.19.0/build/matter.min.js"></script>
+  <script src="js/constants.js?v=8"></script>
+  <script src="js/levels.js?v=3"></script>
+  <script src="js/physics.js?v=3"></script>
+  <script src="js/ai.js?v=1"></script>
+  <script src="js/audio.js?v=2"></script>
+  <script src="js/render.js?v=9"></script>
+  <script src="js/input.js?v=9"></script>
+  <script src="../shared/sevenseg.js"></script>
+  <script src="js/game.js?v=54"></script>
+</body>
+</html>

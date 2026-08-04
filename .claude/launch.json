@@ -4,9 +4,10 @@
     {
       "name": "escapa-buraco",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "8791"],
-      "port": 8791,
-      "url": "http://localhost:8791"
+      "runtimeArgs": ["-m", "http.server", "8792"],
+      "port": 8792,
+      "url": "http://localhost:8792",
+      "autoPort": true
     }
   ]
 }
